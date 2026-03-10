@@ -11,7 +11,7 @@ import { useWallet } from "@/lib/wallet";
 import { useMintNFT } from "@/hooks/useMintNFT";
 import { Loader2, Upload, ExternalLink, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
-import { explorerTxUrl } from "@/lib/starknet";
+import { explorerTxUrl } from "@/lib/sui-utils";
 
 export default function MintPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -21,7 +21,8 @@ export default function MintPage() {
   const { toast } = useToast();
 
   const { connected, address } = useWallet();
-  const { mint, isUploading, isMinting, isConfirming, isConfirmed, isProcessing, txHash } = useMintNFT();
+  const { mint, isUploading, isMinting, isConfirming, isConfirmed, isProcessing, txHash } =
+    useMintNFT();
 
   const handleFileChange = (files: FileList | null) => {
     if (files && files[0]) {
@@ -56,7 +57,7 @@ export default function MintPage() {
     if (!connected || !address) {
       toast({
         title: "Wallet Not Connected",
-        description: "Please connect your Petra wallet first.",
+        description: "Please connect your Sui wallet first.",
         variant: "destructive",
       });
       return;
@@ -91,7 +92,7 @@ export default function MintPage() {
             <CardTitle className="text-3xl font-bold text-center">Create Your NFT</CardTitle>
             <CardDescription className="text-center">
               Upload your artwork and mint it as a unique NFT on{" "}
-              <span className="font-semibold text-primary">Aptos</span>.
+              <span className="font-semibold text-primary">Sui</span>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -111,7 +112,9 @@ export default function MintPage() {
                     >
                       {currentStep > i + 1 ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                     </div>
-                    <span className={currentStep === i + 1 ? "font-semibold" : "text-muted-foreground"}>
+                    <span
+                      className={currentStep === i + 1 ? "font-semibold" : "text-muted-foreground"}
+                    >
                       {label}
                     </span>
                   </div>
@@ -182,7 +185,7 @@ export default function MintPage() {
             {/* Wallet warnings */}
             {!connected && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-200 transition-all duration-300">
-                ⚠️ Please connect your Petra wallet using the button in the navigation bar.
+                ⚠️ Please connect your Sui wallet using the button in the navigation bar.
               </div>
             )}
 
@@ -216,35 +219,29 @@ export default function MintPage() {
                 </>
               ) : isConfirming ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming on Aptos...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming on Sui...
                 </>
               ) : (
-                "Mint NFT on Aptos"
+                "Mint NFT on Sui"
               )}
             </Button>
 
             {/* Faucet info */}
             <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-xs text-muted-foreground">
-              <p className="font-semibold">💡 First time on Aptos Testnet?</p>
+              <p className="font-semibold">💡 First time on Sui Testnet?</p>
               <p>
-                You need testnet APT for gas fees. Get some from{" "}
+                You need testnet SUI for gas fees. Get some from the{" "}
                 <a
-                  href="https://www.aptosfaucet.com/"
+                  href="https://discord.gg/sui"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
-                  Aptos Faucet ↗
+                  Sui Discord ↗
                 </a>{" "}
-                or{" "}
-                <a
-                  href="https://explorer.aptoslabs.com/faucet?network=testnet"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  Explorer Faucet ↗
-                </a>
+                or run{" "}
+                <code className="font-mono bg-muted px-1 rounded">sui client faucet</code> in your
+                terminal.
               </p>
             </div>
           </CardContent>

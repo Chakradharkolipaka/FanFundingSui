@@ -2,16 +2,19 @@
 
 import { useState, useCallback } from "react";
 import { useWallet } from "@/lib/wallet";
-import { MODULE_ADDRESS, MODULE_NAME } from "@/constants";
+import { PACKAGE_ID, MODULE_NAME, COLLECTION_ID, SUI_NODE_URL } from "@/constants";
 import { useToast } from "@/components/ui/use-toast";
+import { Transaction } from "@mysten/sui/transactions";
+import { SuiClient } from "@mysten/sui/client";
 
 /**
- * Hook for minting an NFT on Aptos.
+ * Hook for minting an NFT on Sui.
  * 1. Uploads image + metadata to IPFS via API route
- * 2. Sends a mint_nft entry-function call via Petra wallet
+ * 2. Builds a Sui Transaction and signs via connected wallet
+ * 3. Waits for transaction confirmation
  */
 export function useMintNFT() {
-  const { signAndSubmitTransaction, connected, address } = useWallet();
+  const { signAndExecuteTransaction, connected, address } = useWallet();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
@@ -24,16 +27,25 @@ export function useMintNFT() {
       if (!connected || !address) {
         toast({
           title: "Wallet Not Connected",
-          description: "Please connect your Petra wallet first.",
+          description: "Please connect your Sui wallet first.",
           variant: "destructive",
         });
         return;
       }
 
-      if (!MODULE_ADDRESS) {
+      if (!PACKAGE_ID) {
         toast({
           title: "Configuration Error",
-          description: "Module address is not configured. Set NEXT_PUBLIC_MODULE_ADDRESS.",
+          description: "Package ID is not configured. Set NEXT_PUBLIC_PACKAGE_ID in .env.local.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!COLLECTION_ID) {
+        toast({
+          title: "Configuration Error",
+          description: "Collection ID is not configured. Set NEXT_PUBLIC_COLLECTION_ID in .env.local.",
           variant: "destructive",
         });
         return;
@@ -46,9 +58,10 @@ export function useMintNFT() {
         // ── Step 1: Upload to IPFS ──
         setIsUploading(true);
         toast({
-          title: "📤 Uploading to IPFS...",
+          title: "📤 Step 1/3: Uploading to IPFS...",
           description: "Uploading your image and metadata to decentralized storage.",
         });
+        console.log("[Mint] Step 1: Starting IPFS upload...");
 
         const formData = new FormData();
         formData.append("file", file);
@@ -69,69 +82,84 @@ export function useMintNFT() {
         if (!tokenURI) throw new Error("No token URI returned from IPFS upload");
 
         setIsUploading(false);
+        console.log("[Mint] Step 1 complete. Token URI:", tokenURI);
         toast({
-          title: "✅ Upload Complete",
-          description: "Metadata stored on IPFS. Now minting your NFT...",
+          title: "✅ Step 1/3: Upload Complete",
+          description: `Metadata stored on IPFS. Token URI: ${tokenURI.slice(0, 40)}...`,
         });
 
-        // ── Step 2: Mint on Aptos ──
+        // ── Step 2: Build and sign Sui transaction ──
         setIsMinting(true);
         toast({
-          title: "🔐 Confirm in Wallet",
-          description: "Please approve the mint transaction in your Petra wallet.",
+          title: "🔐 Step 2/3: Confirm in Wallet",
+          description: "Please approve the mint transaction in your Sui wallet.",
         });
+        console.log("[Mint] Step 2: Building Sui transaction...");
+        console.log("[Mint] Package ID:", PACKAGE_ID);
+        console.log("[Mint] Collection ID:", COLLECTION_ID);
 
         const encoder = new TextEncoder();
-        const payload = {
-          type: "entry_function_payload",
-          function: `${MODULE_ADDRESS}::${MODULE_NAME}::mint_nft`,
-          type_arguments: [],
+        const tx = new Transaction();
+
+        tx.moveCall({
+          target: `${PACKAGE_ID}::${MODULE_NAME}::mint_nft`,
           arguments: [
-            Array.from(encoder.encode(name)),
-            Array.from(encoder.encode(description)),
-            Array.from(encoder.encode(tokenURI)),
+            tx.object(COLLECTION_ID),
+            tx.pure.vector("u8", Array.from(encoder.encode(name))),
+            tx.pure.vector("u8", Array.from(encoder.encode(description))),
+            tx.pure.vector("u8", Array.from(encoder.encode(tokenURI))),
           ],
-        };
+        });
 
-        const response = await signAndSubmitTransaction(payload);
-        const hash = response.hash;
+        console.log("[Mint] Transaction built, requesting wallet signature...");
+        const response = await signAndExecuteTransaction(tx);
+        const digest = response.digest;
 
-        setTxHash(hash);
+        setTxHash(digest);
         setIsMinting(false);
+        console.log("[Mint] Step 2 complete. Tx Digest:", digest);
 
         // ── Step 3: Wait for confirmation ──
         setIsConfirming(true);
         toast({
-          title: "⏳ Waiting for Confirmation...",
-          description: `Tx: ${hash.slice(0, 10)}... Confirming on Aptos.`,
+          title: "⏳ Step 3/3: Waiting for Confirmation...",
+          description: `Tx: ${digest.slice(0, 12)}... Confirming on Sui.`,
         });
+        console.log("[Mint] Step 3: Waiting for transaction confirmation...");
 
-        // Poll the Aptos fullnode for transaction completion
-        const nodeUrl = process.env.NEXT_PUBLIC_APTOS_NODE_URL || "https://fullnode.testnet.aptoslabs.com/v1";
+        const client = new SuiClient({ url: SUI_NODE_URL });
         let confirmed = false;
+
         for (let i = 0; i < 30; i++) {
           try {
-            const txRes = await fetch(`${nodeUrl}/transactions/by_hash/${hash}`);
-            if (txRes.ok) {
-              const txData = await txRes.json();
-              if (txData.success !== undefined) {
-                confirmed = txData.success === true;
-                break;
-              }
+            const txResult = await client.waitForTransaction({
+              digest,
+              options: { showEffects: true },
+            });
+            if (txResult.effects?.status?.status === "success") {
+              confirmed = true;
+              console.log("[Mint] Transaction confirmed successfully!");
+              break;
+            } else if (txResult.effects?.status?.status === "failure") {
+              console.error("[Mint] Transaction failed:", txResult.effects.status.error);
+              break;
             }
-          } catch { /* retry */ }
-          await new Promise((r) => setTimeout(r, 1500));
+          } catch (e) {
+            console.log(`[Mint] Waiting... attempt ${i + 1}/30`);
+            await new Promise((r) => setTimeout(r, 1500));
+          }
         }
 
         setIsConfirmed(confirmed);
         toast({
           title: confirmed ? "🎉 NFT Minted Successfully!" : "⚠️ Transaction may still be pending",
           description: confirmed
-            ? "Your NFT is now live on Aptos. View it on the home page!"
+            ? "Your NFT is now live on Sui. View it on the home page!"
             : "Check the explorer for final status.",
         });
+        console.log("[Mint] Final status:", confirmed ? "CONFIRMED" : "PENDING");
       } catch (err: any) {
-        console.error("Mint error:", err);
+        console.error("[Mint] Error:", err);
         const msg = err?.message || String(err);
         if (msg.includes("User") || msg.includes("rejected") || msg.includes("Rejected")) {
           toast({
@@ -152,7 +180,7 @@ export function useMintNFT() {
         setIsConfirming(false);
       }
     },
-    [connected, address, signAndSubmitTransaction, toast]
+    [connected, address, signAndExecuteTransaction, toast]
   );
 
   const isProcessing = isUploading || isMinting || isConfirming;

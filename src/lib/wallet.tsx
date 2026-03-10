@@ -3,205 +3,65 @@
 import React, {
   createContext,
   useContext,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
   ReactNode,
 } from "react";
 import {
-  getAptosWallets,
-  type AptosWallet,
-  AptosSignAndSubmitTransactionNamespace,
-  AptosDisconnectNamespace,
-  AptosGetAccountNamespace,
-  AptosOnAccountChangeNamespace,
-  UserResponseStatus,
-} from "@aptos-labs/wallet-standard";
+  ConnectButton,
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+  useSuiClient,
+} from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
+import type { SuiClient } from "@mysten/sui/client";
 
 // ─── Context Types ─────────────────────────────────────────────────
 
 interface WalletContextType {
   address: string | null;
   connected: boolean;
-  connecting: boolean;
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  signAndSubmitTransaction: (payload: any) => Promise<{ hash: string }>;
-  isPetraInstalled: boolean;
+  suiClient: SuiClient | null;
+  signAndExecuteTransaction: (
+    tx: Transaction
+  ) => Promise<{ digest: string }>;
 }
 
 const WalletContext = createContext<WalletContextType>({
   address: null,
   connected: false,
-  connecting: false,
-  connect: async () => {},
-  disconnect: async () => {},
-  signAndSubmitTransaction: async () => ({ hash: "" }),
-  isPetraInstalled: false,
+  suiClient: null,
+  signAndExecuteTransaction: async () => ({ digest: "" }),
 });
-
-// ─── Helper: find Petra among registered AIP-62 wallets ────────────
-
-function findPetra(wallets: readonly AptosWallet[]): AptosWallet | undefined {
-  return wallets.find((w) => w.name.toLowerCase().includes("petra"));
-}
 
 // ─── Provider ──────────────────────────────────────────────────────
 
-export function PetraWalletProvider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [isPetraInstalled, setIsPetraInstalled] = useState(false);
-  const walletRef = useRef<AptosWallet | null>(null);
+export function SuiWalletProvider({ children }: { children: ReactNode }) {
+  const account = useCurrentAccount();
+  const client = useSuiClient();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
-  // Discover wallets via the AIP-62 Wallet Standard
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const address = account?.address ?? null;
+  const connected = !!account;
 
-    const { aptosWallets, on } = getAptosWallets();
+  const signAndExecuteTransaction = async (
+    tx: Transaction
+  ): Promise<{ digest: string }> => {
+    if (!account) throw new Error("Wallet not connected");
 
-    const checkWallets = (list: readonly AptosWallet[]) => {
-      const petra = findPetra(list);
-      if (petra) {
-        setIsPetraInstalled(true);
-        walletRef.current = petra;
-
-        // Try silent reconnect
-        const connectFeature = petra.features["aptos:connect"];
-        if (connectFeature) {
-          connectFeature
-            .connect(true) // silent = true
-            .then((response) => {
-              if (response.status === UserResponseStatus.APPROVED) {
-                const addr = response.args.address.toString();
-                setAddress(addr);
-                setConnected(true);
-              }
-            })
-            .catch(() => {
-              // Silent reconnect failed — that's fine
-            });
-        }
-
-        // Listen for account changes
-        const onAccountChange = petra.features["aptos:onAccountChange"];
-        if (onAccountChange) {
-          onAccountChange.onAccountChange((account) => {
-            if (account) {
-              setAddress(account.address.toString());
-              setConnected(true);
-            } else {
-              setAddress(null);
-              setConnected(false);
-            }
-          });
-        }
-      }
-    };
-
-    // Check already-registered wallets
-    checkWallets(aptosWallets);
-
-    // Listen for wallets registering later
-    const unsubscribe = on("register", () => {
-      const { aptosWallets: updated } = getAptosWallets();
-      checkWallets(updated);
+    console.log("[Sui Wallet] Signing and executing transaction...");
+    const result = await signAndExecute({
+      transaction: tx,
     });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  const connect = useCallback(async () => {
-    const wallet = walletRef.current;
-    if (!wallet) {
-      window.open("https://petra.app/", "_blank");
-      return;
-    }
-
-    const connectFeature = wallet.features["aptos:connect"];
-    if (!connectFeature) throw new Error("Wallet does not support connect");
-
-    try {
-      setConnecting(true);
-      const response = await connectFeature.connect();
-      if (response.status === UserResponseStatus.APPROVED) {
-        const addr = response.args.address.toString();
-        setAddress(addr);
-        setConnected(true);
-      } else {
-        throw new Error("Connection rejected by user");
-      }
-    } finally {
-      setConnecting(false);
-    }
-  }, []);
-
-  const disconnect = useCallback(async () => {
-    const wallet = walletRef.current;
-    if (!wallet) return;
-
-    const disconnectFeature = wallet.features[AptosDisconnectNamespace];
-    if (disconnectFeature) {
-      try {
-        await disconnectFeature.disconnect();
-      } catch (err) {
-        console.error("Disconnect error:", err);
-      }
-    }
-    setAddress(null);
-    setConnected(false);
-  }, []);
-
-  /**
-   * Sign and submit a transaction.
-   * Accepts old-style { type, function, type_arguments, arguments } payloads
-   * and converts them to the AIP-62 standard format.
-   */
-  const signAndSubmitTransaction = useCallback(
-    async (payload: any): Promise<{ hash: string }> => {
-      const wallet = walletRef.current;
-      if (!wallet) throw new Error("Petra wallet not installed");
-      if (!connected) throw new Error("Wallet not connected");
-
-      const submitFeature = wallet.features[AptosSignAndSubmitTransactionNamespace];
-      if (!submitFeature) {
-        throw new Error("Wallet does not support signAndSubmitTransaction");
-      }
-
-      // Convert old-style entry_function_payload to AIP-62 format
-      const standardPayload = {
-        payload: {
-          function: payload.function as `${string}::${string}::${string}`,
-          typeArguments: payload.type_arguments ?? [],
-          functionArguments: payload.arguments ?? [],
-        },
-      };
-
-      const response = await submitFeature.signAndSubmitTransaction(standardPayload);
-
-      if (response.status === UserResponseStatus.APPROVED) {
-        return { hash: response.args.hash };
-      } else {
-        throw new Error("Transaction rejected by user");
-      }
-    },
-    [connected]
-  );
+    console.log("[Sui Wallet] Transaction executed, digest:", result.digest);
+    return { digest: result.digest };
+  };
 
   return (
     <WalletContext.Provider
       value={{
         address,
         connected,
-        connecting,
-        connect,
-        disconnect,
-        signAndSubmitTransaction,
-        isPetraInstalled,
+        suiClient: client as unknown as SuiClient,
+        signAndExecuteTransaction,
       }}
     >
       {children}

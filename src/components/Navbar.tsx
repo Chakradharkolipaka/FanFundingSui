@@ -20,7 +20,7 @@ export default function Navbar() {
             <span className="flex flex-col">
               <span className="text-sm font-semibold leading-tight">Fan Funding</span>
               <span className="text-xs text-muted-foreground leading-tight">
-                Aptos • Support creators on-chain
+                Sui • Support creators on-chain
               </span>
             </span>
           </Link>

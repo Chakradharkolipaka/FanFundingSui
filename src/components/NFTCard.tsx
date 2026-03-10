@@ -3,14 +3,28 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import Confetti from "react-confetti";
 import { Loader2, ExternalLink } from "lucide-react";
 import { useDonate } from "@/hooks/useDonate";
-import { shortenAddress, formatEth, parseEth, explorerTxUrl, explorerAccountUrl } from "@/lib/starknet";
+import {
+  shortenAddress,
+  formatEth,
+  parseEth,
+  explorerTxUrl,
+  explorerAccountUrl,
+  explorerObjectUrl,
+} from "@/lib/sui-utils";
 import { DONATION_TOKEN_SYMBOL } from "@/constants";
 
 import type { NftData } from "@/hooks/useNFTs";
@@ -22,7 +36,7 @@ interface NFTCardProps {
 }
 
 export default function NFTCard({ nft, onDonation, onTotalsChange }: NFTCardProps) {
-  const { tokenId, metadata, owner, totalDonations } = nft;
+  const { tokenId, objectId, metadata, owner, totalDonations } = nft;
   const [donationAmount, setDonationAmount] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
   const { toast } = useToast();
@@ -47,9 +61,19 @@ export default function NFTCard({ nft, onDonation, onTotalsChange }: NFTCardProp
       return;
     }
 
+    if (!objectId) {
+      toast({
+        title: "Error",
+        description: "NFT object ID not found. Cannot donate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const amountOctas = parseEth(donationAmount);
-      donate(tokenId, amountOctas);
+      const amountMist = parseEth(donationAmount);
+      console.log("[NFTCard] Donating", donationAmount, DONATION_TOKEN_SYMBOL, "=", amountMist.toString(), "MIST to object:", objectId);
+      donate(objectId, amountMist);
     } catch {
       toast({
         title: "Invalid Amount",
@@ -92,7 +116,17 @@ export default function NFTCard({ nft, onDonation, onTotalsChange }: NFTCardProp
               rel="noopener noreferrer"
               className="text-xs text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1"
             >
-              Owner: {shortenAddress(owner)} <ExternalLink className="h-3 w-3" />
+              Creator: {shortenAddress(owner)} <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          {objectId && (
+            <a
+              href={explorerObjectUrl(objectId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1"
+            >
+              Object: {shortenAddress(objectId)} <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </CardContent>
@@ -117,7 +151,7 @@ export default function NFTCard({ nft, onDonation, onTotalsChange }: NFTCardProp
                   Your support helps the creator. Enter the amount of {DONATION_TOKEN_SYMBOL} you&apos;d like to donate.
                   <br />
                   <span className="text-xs mt-1 block">
-                    💡 On Aptos, this sends a native APT transfer via the smart contract.
+                    💡 On Sui, this sends a native SUI transfer via the smart contract.
                   </span>
                 </DialogDescription>
               </DialogHeader>
@@ -132,7 +166,9 @@ export default function NFTCard({ nft, onDonation, onTotalsChange }: NFTCardProp
                     onChange={(e) => setDonationAmount(e.target.value)}
                     disabled={isDonating}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Amount in {DONATION_TOKEN_SYMBOL} (e.g. 0.1)</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Amount in {DONATION_TOKEN_SYMBOL} (e.g. 0.1 = 100,000,000 MIST)
+                  </p>
                 </div>
                 <Button
                   onClick={handleDonate}
@@ -157,31 +193,26 @@ export default function NFTCard({ nft, onDonation, onTotalsChange }: NFTCardProp
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"
                       >
-                        {txHash.slice(0, 10)}...{txHash.slice(-6)}
+                        {txHash.slice(0, 12)}...{txHash.slice(-6)}
                       </a>
                     </p>
                   </div>
                 )}
 
                 <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
-                  <h4 className="text-xs font-semibold text-muted-foreground">💧 Need testnet APT?</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground">💧 Need testnet SUI?</h4>
                   <div className="flex flex-wrap gap-2">
                     <a
-                      href="https://www.aptosfaucet.com/"
+                      href="https://discord.gg/sui"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline"
                     >
-                      Aptos Faucet ↗
+                      Discord Faucet ↗
                     </a>
-                    <a
-                      href="https://explorer.aptoslabs.com/faucet?network=testnet"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Explorer Faucet ↗
-                    </a>
+                    <span className="text-xs text-muted-foreground">
+                      or run: <code className="font-mono">sui client faucet</code>
+                    </span>
                   </div>
                 </div>
               </div>

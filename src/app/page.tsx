@@ -7,8 +7,8 @@ import NFTCard from "@/components/NFTCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import { Button } from "@/components/ui/button";
 import { useNFTs } from "@/hooks/useNFTs";
-import { formatEth, shortenAddress, explorerAccountUrl, explorerTxUrl } from "@/lib/starknet";
-import { MODULE_ADDRESS, DONATION_TOKEN_SYMBOL, EXPLORER_BASE_URL } from "@/constants";
+import { formatEth, shortenAddress, explorerAccountUrl, explorerTxUrl, explorerObjectUrl } from "@/lib/sui-utils";
+import { PACKAGE_ID, COLLECTION_ID, DONATION_TOKEN_SYMBOL, EXPLORER_BASE_URL } from "@/constants";
 import { ExternalLink } from "lucide-react";
 
 export default function Home() {
@@ -62,16 +62,26 @@ export default function Home() {
           </h1>
           <p className="text-muted-foreground max-w-xl text-sm md:text-base">
             Discover NFTs, support creators, and track the most supported drops — powered
-            by <span className="font-semibold text-primary">Aptos</span>.
+            by <span className="font-semibold text-primary">Sui</span>.
           </p>
-          {MODULE_ADDRESS && (
+          {PACKAGE_ID && (
             <a
-              href={explorerAccountUrl(MODULE_ADDRESS)}
+              href={explorerObjectUrl(PACKAGE_ID)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-2 hover:text-primary transition-colors"
             >
-              Module: {shortenAddress(MODULE_ADDRESS)} <ExternalLink className="h-3 w-3" />
+              Package: {shortenAddress(PACKAGE_ID)} <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          {COLLECTION_ID && (
+            <a
+              href={explorerObjectUrl(COLLECTION_ID)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-2 ml-4 hover:text-primary transition-colors"
+            >
+              Collection: {shortenAddress(COLLECTION_ID)} <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
@@ -94,32 +104,40 @@ export default function Home() {
       </section>
 
       {/* ── Network Info Banner ── */}
-      <section className="rounded-xl border bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all duration-300 hover:shadow-lg">
+      <section className="rounded-xl border bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-teal-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all duration-300 hover:shadow-lg">
         <div className="flex items-center gap-3">
           <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
           <div>
-            <p className="text-sm font-medium">Aptos Testnet</p>
+            <p className="text-sm font-medium">Sui Testnet</p>
             <p className="text-xs text-muted-foreground">
-              Wallet: Petra | Fee token: APT
+              Wallet: Sui Wallet / Suiet / Ethos | Fee token: SUI
             </p>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <a
-            href="https://www.aptosfaucet.com/"
+            href="https://discord.gg/sui"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs px-3 py-1 rounded-full border bg-background hover:bg-accent transition-all duration-200 hover:scale-105"
           >
-            💧 Get Testnet APT
+            💧 Get Testnet SUI
           </a>
           <a
-            href="https://petra.app/"
+            href="https://suiwallet.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs px-3 py-1 rounded-full border bg-background hover:bg-accent transition-all duration-200 hover:scale-105"
           >
-            🦋 Petra Wallet
+            💧 Sui Wallet
+          </a>
+          <a
+            href="https://suiscan.xyz/testnet"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs px-3 py-1 rounded-full border bg-background hover:bg-accent transition-all duration-200 hover:scale-105"
+          >
+            🔍 Explorer
           </a>
         </div>
       </section>
@@ -167,30 +185,30 @@ export default function Home() {
           </div>
 
           <div className="rounded-2xl border bg-card dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80 p-6 transition-all duration-300 hover:shadow-lg">
-            <h2 className="text-xl font-semibold mb-1">About Aptos</h2>
+            <h2 className="text-xl font-semibold mb-1">About Sui</h2>
             <p className="text-sm text-muted-foreground mb-4">
               Key info about the network powering this platform.
             </p>
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-3">
                 <span className="text-muted-foreground">Network</span>
-                <span className="font-medium">Aptos Testnet</span>
+                <span className="font-medium">Sui Testnet</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-3">
                 <span className="text-muted-foreground">Consensus</span>
-                <span className="font-medium">AptosBFT (DiemBFT v4)</span>
+                <span className="font-medium">Mysticeti (DAG-based)</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-3">
                 <span className="text-muted-foreground">Smart Contract</span>
-                <span className="font-medium">Move Language</span>
+                <span className="font-medium">Move Language (Object Model)</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-3">
-                <span className="text-muted-foreground">Account Model</span>
-                <span className="font-medium">Resource-Based</span>
+                <span className="text-muted-foreground">Object Model</span>
+                <span className="font-medium">Object-Centric (Shared Objects)</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-3">
                 <span className="text-muted-foreground">Donation Method</span>
-                <span className="font-medium">Native APT Transfer</span>
+                <span className="font-medium">Native SUI Transfer via Contract</span>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-3">
                 <span className="text-muted-foreground">Block Explorer</span>
@@ -200,7 +218,7 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className="font-medium text-primary hover:underline flex items-center gap-1"
                 >
-                  Aptos Explorer <ExternalLink className="h-3 w-3" />
+                  SuiScan <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
             </div>
@@ -226,7 +244,7 @@ export default function Home() {
           ) : (
             <div className="col-span-full text-center py-10">
               <p className="mb-4 text-muted-foreground">
-                No NFTs found yet. Be the first to mint and support a cause on Aptos.
+                No NFTs found yet. Be the first to mint and support a cause on Sui.
               </p>
               <Button asChild className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
                 <Link href="/mint">Mint an NFT</Link>

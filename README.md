@@ -1,84 +1,68 @@
-# Fan Funding Platform on StarkNet
+# Fan Funding Platform on Sui
 
-A decentralized fan funding platform built on **StarkNet** where creators can mint NFTs and receive direct ETH donations from their supporters. Powered by Cairo smart contracts with native Account Abstraction.
+A decentralized fan funding platform built on **Sui** where creators can mint NFTs and receive direct SUI donations from their supporters. Powered by Move smart contracts with Sui's object-centric model.
 
 ## 🚀 Network & Contract Info
 
-- **Network**: StarkNet Sepolia (Testnet)
-- **Contract Language**: Cairo 2.x
-- **Token Standard**: ERC-721 (OpenZeppelin Cairo)
-- **Donation Method**: Multicall (approve ETH + donate in one transaction)
+- **Network**: Sui Testnet
+- **Explorer**: [SuiScan](https://suiscan.xyz/testnet)
+- **RPC**: `https://fullnode.testnet.sui.io:443`
 
 ## 🔑 Supported Wallets
 
-| Wallet | Type | Install |
-|--------|------|---------|
-| **ArgentX** | Browser Extension | [argent.xyz/argent-x](https://www.argent.xyz/argent-x/) |
-| **Braavos** | Browser Extension | [braavos.app](https://braavos.app/) |
+- [Sui Wallet](https://chrome.google.com/webstore/detail/sui-wallet/)
+- [Suiet](https://suiet.app/)
+- [Ethos Wallet](https://ethoswallet.xyz/)
+- [Nightly](https://nightly.app/)
 
-## 💧 Testnet Faucets (StarkNet Sepolia)
+## 💧 Testnet Faucet
 
-| Faucet | URL |
-|--------|-----|
-| StarkNet Faucet | [starknet-faucet.vercel.app](https://starknet-faucet.vercel.app/) |
-| Blast API Faucet | [blastapi.io/faucets/starknet-sepolia-eth](https://blastapi.io/faucets/starknet-sepolia-eth) |
-| Alchemy Faucet | [alchemy.com/faucets/starknet-sepolia](https://www.alchemy.com/faucets/starknet-sepolia) |
+```bash
+sui client faucet
+```
+Or via [Sui Discord](https://discord.gg/sui) `#testnet-faucet` channel.
 
 ## 🛠️ Tech Stack
 
+- **Blockchain**: Sui (Move)
 - **Frontend**: Next.js 14, React, TailwindCSS, shadcn/ui
-- **Smart Contracts**: Cairo 2.x (Scarb + Starkli)
-- **Blockchain**: StarkNet (Ethereum Layer 2, ZK-Rollup)
-- **Wallet Integration**: @starknet-react/core, get-starknet
-- **JS Library**: starknet.js
+- **Wallet**: @mysten/dapp-kit
 - **Storage**: IPFS via Pinata
-- **Animations**: Framer Motion, react-confetti
+- **Deploy**: Sui CLI
 
 ## 📦 Installation
 
 ```bash
-npm install --legacy-peer-deps
-```
-
-## 🔧 Development
-
-```bash
+npm install
+cp env.local.example .env.local
+# Fill in values after deploying the contract
 npm run dev
 ```
 
-## 🔗 Smart Contract (Cairo)
-
-Build and deploy the Cairo contract:
+## 🔗 Smart Contract (Move)
 
 ```bash
-# Install Scarb (Cairo package manager)
-curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
-
-# Install Starkli (CLI deployment tool)
-curl https://get.starkli.sh | sh
+# Install Sui CLI
+cargo install --locked --git https://github.com/MystenLabs/sui.git --branch testnet sui
 
 # Build
-cd contracts/cairo
-scarb build
+cd contracts/sui
+sui move build
 
-# Declare (upload bytecode)
-starkli declare target/dev/fan_funding_starknet_NFTDonation.contract_class.json \
-  --rpc https://starknet-sepolia.public.blastapi.io \
-  --account <your_account_file>
+# Test
+sui move test
 
-# Deploy (instantiate)
-starkli deploy <class_hash> \
-  --rpc https://starknet-sepolia.public.blastapi.io \
-  --account <your_account_file>
+# Deploy
+./scripts/deploy-sui.sh
 ```
 
 ## 🌐 Environment Variables
 
 ```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...        # Deployed StarkNet contract address
-NEXT_PUBLIC_RPC_URL=https://starknet-sepolia.public.blastapi.io
+NEXT_PUBLIC_PACKAGE_ID=0x...              # Published package ID
+NEXT_PUBLIC_COLLECTION_ID=0x...           # Shared Collection object ID
+NEXT_PUBLIC_SUI_NODE_URL=https://fullnode.testnet.sui.io:443
 PINATA_JWT=...                            # Server-side Pinata JWT
-NEXT_PUBLIC_PINATA_JWT=...                # Client-side Pinata JWT (if needed)
 ```
 
 ## 🌐 Deployment
@@ -89,8 +73,7 @@ The app is deployed on Vercel:
 npm run build
 ```
 
-## 🔍 Block Explorers
+## 🔍 Block Explorer
 
-- [Voyager (Sepolia)](https://sepolia.voyager.online)
-- [StarkScan (Sepolia)](https://sepolia.starkscan.co)
-
+- [SuiScan (Testnet)](https://suiscan.xyz/testnet)
+- [SuiVision (Testnet)](https://testnet.suivision.xyz)

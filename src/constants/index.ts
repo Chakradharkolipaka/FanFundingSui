@@ -1,26 +1,26 @@
-// ─── Aptos Configuration ────────────────────────────────────────────
+// ─── Sui Configuration ──────────────────────────────────────────
 
-/** Module address on Aptos — set via NEXT_PUBLIC_MODULE_ADDRESS env var */
-export const MODULE_ADDRESS: string = process.env.NEXT_PUBLIC_MODULE_ADDRESS || "";
+/** Package ID on Sui — set via NEXT_PUBLIC_PACKAGE_ID env var */
+export const PACKAGE_ID: string = process.env.NEXT_PUBLIC_PACKAGE_ID || "";
+
+/** Shared Collection object ID — set via NEXT_PUBLIC_COLLECTION_ID env var */
+export const COLLECTION_ID: string = process.env.NEXT_PUBLIC_COLLECTION_ID || "";
 
 /** Module name as published on-chain */
 export const MODULE_NAME = "nft_donation";
 
-/** Full module identifier for entry / view function calls */
-export const MODULE_ID = `${MODULE_ADDRESS}::${MODULE_NAME}` as const;
+/** Sui fullnode URL (testnet) */
+export const SUI_NODE_URL: string =
+  process.env.NEXT_PUBLIC_SUI_NODE_URL || "https://fullnode.testnet.sui.io:443";
 
-/** Aptos fullnode URL (testnet) */
-export const APTOS_NODE_URL: string =
-  process.env.NEXT_PUBLIC_APTOS_NODE_URL || "https://fullnode.testnet.aptoslabs.com/v1";
-
-/** Aptos explorer base URL (testnet) */
-export const EXPLORER_BASE_URL = "https://explorer.aptoslabs.com";
+/** Sui explorer base URL (testnet) */
+export const EXPLORER_BASE_URL = "https://suiscan.xyz/testnet";
 
 /** Shorthand used in the UI */
-export const DONATION_TOKEN_SYMBOL = "APT";
+export const DONATION_TOKEN_SYMBOL = "SUI";
 
-/** Number of decimals for APT (Octas → APT = 10^8) */
-export const APT_DECIMALS = 8;
+/** Number of decimals for SUI (MIST → SUI = 10^9) */
+export const SUI_DECIMALS = 9;
 
 /** Network label shown in the UI */
-export const NETWORK_NAME = "Aptos Testnet";
+export const NETWORK_NAME = "Sui Testnet";
