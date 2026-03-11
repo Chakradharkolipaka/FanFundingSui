@@ -50,6 +50,7 @@ export function SuiWalletProvider({ children }: { children: ReactNode }) {
     console.log("[Sui Wallet] Signing and executing transaction...");
     const result = await signAndExecute({
       transaction: tx,
+      chain: "sui:testnet",
     });
     console.log("[Sui Wallet] Transaction executed, digest:", result.digest);
     return { digest: result.digest };
