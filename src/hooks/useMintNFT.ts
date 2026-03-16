@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useWallet } from "@/lib/wallet";
 import { PACKAGE_ID, MODULE_NAME, COLLECTION_ID, SUI_NODE_URL } from "@/constants";
 import { useToast } from "@/components/ui/use-toast";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiClient } from "@mysten/sui/client";
+import { useSigner } from "@/hooks/useSigner";
 
 /**
  * Hook for minting an NFT on Sui.
@@ -14,7 +14,7 @@ import { SuiClient } from "@mysten/sui/client";
  * 3. Waits for transaction confirmation
  */
 export function useMintNFT() {
-  const { signAndExecuteTransaction, connected, address } = useWallet();
+  const signer = useSigner();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
@@ -24,10 +24,10 @@ export function useMintNFT() {
 
   const mint = useCallback(
     async (file: File, name: string, description: string) => {
-      if (!connected || !address) {
+      if (!signer?.address) {
         toast({
-          title: "Wallet Not Connected",
-          description: "Please connect your Sui wallet first.",
+          title: "Not Signed In",
+          description: "Please sign in with Google (zkLogin) or connect your Sui wallet.",
           variant: "destructive",
         });
         return;
@@ -112,7 +112,7 @@ export function useMintNFT() {
         });
 
         console.log("[Mint] Transaction built, requesting wallet signature...");
-        const response = await signAndExecuteTransaction(tx);
+  const response = await signer.signAndExecute(tx);
         const digest = response.digest;
 
         setTxHash(digest);
@@ -180,7 +180,7 @@ export function useMintNFT() {
         setIsConfirming(false);
       }
     },
-    [connected, address, signAndExecuteTransaction, toast]
+    [signer, toast]
   );
 
   const isProcessing = isUploading || isMinting || isConfirming;

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useWallet } from "@/lib/wallet";
 import { PACKAGE_ID, MODULE_NAME, DONATION_TOKEN_SYMBOL, SUI_NODE_URL } from "@/constants";
 import { useToast } from "@/components/ui/use-toast";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiClient } from "@mysten/sui/client";
+import { useSigner } from "@/hooks/useSigner";
 
 /**
  * Hook for donating SUI to an NFT creator on Sui.
@@ -15,7 +15,7 @@ import { SuiClient } from "@mysten/sui/client";
  * it to the donate function which transfers it to the NFT creator.
  */
 export function useDonate() {
-  const { signAndExecuteTransaction, connected } = useWallet();
+  const signer = useSigner();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -27,10 +27,10 @@ export function useDonate() {
    */
   const donate = useCallback(
     async (tokenObjectId: string, amountMist: bigint) => {
-      if (!connected) {
+      if (!signer?.address) {
         toast({
-          title: "Wallet Not Connected",
-          description: "Please connect your Sui wallet.",
+          title: "Not Signed In",
+          description: "Please sign in with Google (zkLogin) or connect your Sui wallet.",
           variant: "destructive",
         });
         return;
@@ -71,7 +71,7 @@ export function useDonate() {
         });
 
         console.log("[Donate] Requesting wallet signature...");
-        const response = await signAndExecuteTransaction(tx);
+  const response = await signer.signAndExecute(tx);
         const digest = response.digest;
 
         setTxHash(digest);
@@ -143,7 +143,7 @@ export function useDonate() {
         setIsLoading(false);
       }
     },
-    [connected, signAndExecuteTransaction, toast]
+    [signer, toast]
   );
 
   return { donate, isLoading, txHash, isConfirmed };

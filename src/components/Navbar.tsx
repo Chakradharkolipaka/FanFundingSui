@@ -2,6 +2,8 @@
 
 import ConnectWallet from "@/components/ConnectWallet";
 import { ThemeToggle } from "@/components/theme-toggle";
+import AuthModal from "@/components/auth/AuthModal";
+import UserProfileMenu from "@/components/auth/UserProfileMenu";
 import Link from "next/link";
 import { Home, PlusCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -47,6 +49,8 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          <UserProfileMenu />
+          <AuthModal />
           <ConnectWallet />
         </div>
       </div>

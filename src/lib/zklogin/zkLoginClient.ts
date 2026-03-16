@@ -1,0 +1,49 @@
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import {
+  generateRandomness,
+  generateNonce,
+  getExtendedEphemeralPublicKey,
+} from "@mysten/sui/zklogin";
+import type { SuiClient } from "@mysten/sui/client";
+
+export type ZkLoginInitResult = {
+  ephemeralKeypair: Ed25519Keypair;
+  // public key used for proving (extended format)
+  ephemeralPublicKey: string;
+  randomness: string;
+  maxEpoch: number;
+  nonce: string;
+};
+
+/**
+ * Creates the values required for the zkLogin flow:
+ * - ephemeral keypair
+ * - randomness
+ * - maxEpoch (based on current epoch)
+ * - nonce (bound to ephemeral pubkey + maxEpoch + randomness)
+ */
+export async function initZkLogin(client: SuiClient): Promise<ZkLoginInitResult> {
+  const ephemeralKeypair = new Ed25519Keypair();
+  const randomness = generateRandomness();
+
+  const { epoch } = await client.getLatestSuiSystemState();
+  // Keep it short so sessions don't linger. Typical examples use + 2.
+  const maxEpoch = Number(epoch) + 2;
+
+  const publicKey = ephemeralKeypair.getPublicKey();
+  const ephemeralPublicKey = getExtendedEphemeralPublicKey(publicKey);
+  const nonce = generateNonce(publicKey, maxEpoch, randomness);
+
+  return {
+    ephemeralKeypair,
+    ephemeralPublicKey,
+    randomness,
+    maxEpoch,
+    nonce,
+  };
+}
+
+export function exportEphemeralKeypairSecret(ephemeralKeypair: Ed25519Keypair): string {
+  // Persist only in sessionStorage (not localStorage).
+  return ephemeralKeypair.getSecretKey();
+}

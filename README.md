@@ -63,7 +63,48 @@ NEXT_PUBLIC_PACKAGE_ID=0x...              # Published package ID
 NEXT_PUBLIC_COLLECTION_ID=0x...           # Shared Collection object ID
 NEXT_PUBLIC_SUI_NODE_URL=https://fullnode.testnet.sui.io:443
 PINATA_JWT=...                            # Server-side Pinata JWT
+
+# zkLogin (Google)
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=...          # Google OAuth client id
+ZKLOGIN_PROVER_URL=https://prover.testnet.sui.io/v1  # zkLogin prover endpoint (Mysten hosted, testnet)
 ```
+
+## zkLogin Authentication
+
+This dApp supports **two** ways to sign Sui transactions:
+
+1) **Wallet extension** (existing): Sui Wallet / Suiet / etc.
+2) **Google zkLogin** (new): sign in with Google and get a derived Sui address without requiring a wallet extension.
+
+### How it works
+
+At a high level:
+
+User
+↓
+Google OAuth (GIS popup)
+↓
+Google ID Token (JWT)
+↓
+zkLogin prover (`ZKLOGIN_PROVER_URL`)
+↓
+Derived Sui Address
+↓
+Sign transaction with ephemeral key + zk proof
+
+### Configuration
+
+1. Create a Google OAuth Client ID (Web) in Google Cloud Console.
+2. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local`.
+3. Set `ZKLOGIN_PROVER_URL` to a zkLogin prover endpoint (Mysten hosted or your own).
+	- For Sui testnet, a common default is: `https://prover.testnet.sui.io/v1`
+	- If you omit it locally, this repo falls back to the testnet default automatically.
+
+### Session persistence & security
+
+- zkLogin session metadata is stored in **localStorage**.
+- The ephemeral private key is stored in **sessionStorage** (cleared when the browser session ends).
+- Sessions automatically expire when the JWT expires.
 
 ## 🌐 Deployment
 
