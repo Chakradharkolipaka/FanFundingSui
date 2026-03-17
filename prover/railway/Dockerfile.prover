@@ -1,0 +1,13 @@
+FROM mysten/zklogin:prover-a66971815c15ba10c699203c5e3826a18eabc4ee
+
+# Railway (and similar hosts) can’t mount local files easily.
+# We inject the zkey via env var (ZKEY_BASE64) and decode it at startup.
+
+COPY prover/railway/entrypoint-prover.sh /entrypoint-prover.sh
+RUN chmod +x /entrypoint-prover.sh
+
+ENV ZKEY=/app/binaries/zkLogin.zkey
+
+EXPOSE 8080
+
+ENTRYPOINT ["/entrypoint-prover.sh"]

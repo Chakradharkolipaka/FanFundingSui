@@ -1,0 +1,21 @@
+# zkLogin prover (self-hosted)
+#
+# This uses Mysten's open-source `zklogin-prover` implementation.
+# You'll run this on your VPS and then point Vercel to it via:
+#   ZKLOGIN_PROVER_URL=https://<your-domain>/v1
+#
+# NOTE: The prover is compute-heavy. For testnet/dev and low traffic,
+# a small VPS can work, but if you see timeouts upgrade CPU/RAM.
+
+services:
+  zklogin-prover:
+    build:
+      context: ./prover
+      dockerfile: Dockerfile
+    image: fanfunding/zklogin-prover:local
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      # Keep logs readable
+      - RUST_LOG=info

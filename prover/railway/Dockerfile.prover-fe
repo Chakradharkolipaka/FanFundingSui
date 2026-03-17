@@ -1,0 +1,7 @@
+FROM mysten/zklogin:prover-fe-a66971815c15ba10c699203c5e3826a18eabc4ee
+
+# This image exposes the public API (typically POST /v1).
+# It requires PROVER_URI to point at the private backend prover, e.g.:
+#   PROVER_URI=http://prover:8080/input
+
+EXPOSE 8080

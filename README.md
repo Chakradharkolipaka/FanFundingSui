@@ -66,7 +66,7 @@ PINATA_JWT=...                            # Server-side Pinata JWT
 
 # zkLogin (Google)
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=...          # Google OAuth client id
-ZKLOGIN_PROVER_URL=https://prover.testnet.sui.io/v1  # zkLogin prover endpoint (Mysten hosted, testnet)
+ZKLOGIN_PROVER_URL=...                    # zkLogin prover base URL, e.g. https://prover.your-domain.com/v1
 ```
 
 ## zkLogin Authentication
@@ -97,8 +97,10 @@ Sign transaction with ephemeral key + zk proof
 1. Create a Google OAuth Client ID (Web) in Google Cloud Console.
 2. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local`.
 3. Set `ZKLOGIN_PROVER_URL` to a zkLogin prover endpoint (Mysten hosted or your own).
-	- For Sui testnet, a common default is: `https://prover.testnet.sui.io/v1`
-	- If you omit it locally, this repo falls back to the testnet default automatically.
+	- In some environments (notably Vercel in some regions), Mysten hosted prover domains may fail DNS resolution (ENOTFOUND).
+	- If that happens, you must self-host a prover and point `ZKLOGIN_PROVER_URL` at it.
+
+See `PROVER.md` for a VPS + Docker guide.
 
 ### Session persistence & security
 
