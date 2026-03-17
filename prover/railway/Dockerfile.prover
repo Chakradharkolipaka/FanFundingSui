@@ -6,8 +6,13 @@ FROM mysten/zklogin:prover-a66971815c15ba10c699203c5e3826a18eabc4ee
 COPY prover/railway/entrypoint-prover.sh /entrypoint-prover.sh
 RUN chmod +x /entrypoint-prover.sh
 
-ENV ZKEY=/app/binaries/zkLogin.zkey
+# Don't set a default ZKEY here.
+# The base image ships a tiny placeholder /app/binaries/zkLogin.zkey (134 bytes).
+# We always inject the real zkey via ZKEY_BASE64 at runtime and point ZKEY to /tmp/zkLogin.zkey.
 
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint-prover.sh"]
+
+# Some PaaS providers may override ENTRYPOINT. Keep a sensible default CMD anyway.
+CMD ["/app/binaries/proverServer"]
