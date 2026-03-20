@@ -12,6 +12,7 @@ declare global {
 type Props = {
   onJwt: (jwt: string) => void | Promise<void>;
   disabled?: boolean;
+  nonce?: string;
 };
 
 function loadGoogleIdentityScript(): Promise<void> {
@@ -40,7 +41,7 @@ function loadGoogleIdentityScript(): Promise<void> {
   });
 }
 
-export default function GoogleLoginButton({ onJwt, disabled }: Props) {
+export default function GoogleLoginButton({ onJwt, disabled, nonce }: Props) {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,6 +75,9 @@ export default function GoogleLoginButton({ onJwt, disabled }: Props) {
           },
           // We use popup explicitly to avoid full page redirect.
           ux_mode: "popup",
+          // Important for zkLogin: ensure the resulting JWT includes the nonce claim.
+          // Enoki may validate `aud` + `nonce` binding.
+          nonce: nonce || undefined,
         });
 
         // Render the Google branded button into our container.
@@ -99,7 +103,7 @@ export default function GoogleLoginButton({ onJwt, disabled }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [canUseGoogle, clientId, onJwt]);
+  }, [canUseGoogle, clientId, onJwt, nonce]);
 
   if (!canUseGoogle) {
     return (

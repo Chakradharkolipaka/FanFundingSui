@@ -145,7 +145,7 @@ export default function AuthModal({ trigger }: Props) {
             <div className="text-sm font-medium">Google (zkLogin)</div>
             <div className="text-xs text-muted-foreground">Sign in with Google to get a Sui address without a wallet extension.</div>
             <div className="mt-3">
-              <GoogleLoginButton onJwt={handleJwt} disabled={pendingInit} />
+              <GoogleLoginButton onJwt={handleJwt} disabled={pendingInit || !nonce} nonce={nonce ?? undefined} />
             </div>
           </div>
 
