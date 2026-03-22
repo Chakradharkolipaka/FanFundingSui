@@ -19,14 +19,6 @@ export function useSigner(): UnifiedSigner | null {
   const client = useSuiClient();
 
   return useMemo(() => {
-    if (wallet.connected && wallet.address) {
-      return {
-        kind: "wallet" as const,
-        address: wallet.address,
-        signAndExecute: wallet.signAndExecuteTransaction,
-      };
-    }
-
     const session = loadZkLoginSession();
     if (session?.address) {
       // ephemeral secret is stored in sessionStorage
@@ -56,6 +48,14 @@ export function useSigner(): UnifiedSigner | null {
             window.sessionStorage.removeItem("fanfunding:zklogin-ephemeral-secret:v1");
           }
         },
+      };
+    }
+
+    if (wallet.connected && wallet.address) {
+      return {
+        kind: "wallet" as const,
+        address: wallet.address,
+        signAndExecute: wallet.signAndExecuteTransaction,
       };
     }
 
