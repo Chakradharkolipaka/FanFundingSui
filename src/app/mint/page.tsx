@@ -24,24 +24,27 @@ export default function MintPage() {
   const { mint, isUploading, isMinting, isConfirming, isConfirmed, isProcessing, txHash } =
     useMintNFT();
 
-  const handleFileChange = (files: FileList | null) => {
-    if (files && files[0]) {
-      const selectedFile = files[0];
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
-      toast({
-        title: "📷 Image Selected",
-        description: `File "${selectedFile.name}" ready for upload.`,
-      });
-    }
-  };
+  const handleFileChange = useCallback(
+    (files: FileList | null) => {
+      if (files && files[0]) {
+        const selectedFile = files[0];
+        setFile(selectedFile);
+        setPreviewUrl(URL.createObjectURL(selectedFile));
+        toast({
+          title: "📷 Image Selected",
+          description: `File "${selectedFile.name}" ready for upload.`,
+        });
+      }
+    },
+    [toast]
+  );
 
   const onDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       handleFileChange(event.dataTransfer.files);
     },
-    []
+    [handleFileChange]
   );
 
   const handleMint = async () => {
