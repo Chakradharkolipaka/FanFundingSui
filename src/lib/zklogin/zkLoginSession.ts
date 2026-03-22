@@ -41,6 +41,20 @@ export function clearZkLoginSession() {
   emitChanged();
 }
 
+/**
+ * Clears all zkLogin-related client storage (local + session).
+ * Use this when:
+ * - user signs out
+ * - we detect a session mismatch (proof/seed/public key mismatch)
+ */
+export function clearAllZkLoginState() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORAGE_KEY);
+  window.sessionStorage.removeItem("fanfunding:zklogin-ephemeral-secret:v1");
+  window.sessionStorage.removeItem("fanfunding:zklogin-init:v1");
+  emitChanged();
+}
+
 export function subscribeZkLoginSessionChanged(cb: () => void) {
   if (typeof window === "undefined") return () => {};
   const handler = () => cb();

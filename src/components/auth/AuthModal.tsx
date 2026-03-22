@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { ConnectButton, useSuiClient } from "@mysten/dapp-kit";
 import { initZkLogin, exportEphemeralKeypairSecret } from "@/lib/zklogin/zkLoginClient";
-import { clearZkLoginSession, saveZkLoginSession } from "@/lib/zklogin/zkLoginSession";
+import { clearAllZkLoginState, saveZkLoginSession } from "@/lib/zklogin/zkLoginSession";
+import { loadZkLoginSession } from "@/lib/zklogin/zkLoginSession";
 import { decodeJwt } from "jose";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -31,6 +32,14 @@ export default function AuthModal({ trigger }: Props) {
     let cancelled = false;
     async function run() {
       if (!open) return;
+
+      // Clean target design: if a valid zkLogin session already exists, don't generate new init material.
+      // Re-initializing would create a new ephemeral keypair and can desync proof/seed/signature.
+      const existing = loadZkLoginSession();
+      if (existing?.address && existing?.jwt) {
+        return;
+      }
+
       setPendingInit(true);
       try {
         const init = await initZkLogin(client as any);
@@ -115,18 +124,14 @@ export default function AuthModal({ trigger }: Props) {
         // If the ephemeral seed isn't present, we can't sign transactions. If we proceed, users will hit
         // "Invalid user signature / Required Signature absent". Instead, clear everything and force re-login.
         if (!seedB64) {
-          clearZkLoginSession();
-          window.sessionStorage.removeItem("fanfunding:zklogin-ephemeral-secret:v1");
-          window.sessionStorage.removeItem("fanfunding:zklogin-init:v1");
+          clearAllZkLoginState();
           throw new Error("zkLogin session incomplete. Please sign in again.");
         }
 
         // Defensive: make sure address derivation is stable.
         const normalized = String(address).toLowerCase();
         if (!normalized.startsWith("0x") || normalized.length < 10) {
-          clearZkLoginSession();
-          window.sessionStorage.removeItem("fanfunding:zklogin-ephemeral-secret:v1");
-          window.sessionStorage.removeItem("fanfunding:zklogin-init:v1");
+          clearAllZkLoginState();
           throw new Error("zkLogin address derivation failed. Please sign in again.");
         }
 
@@ -137,6 +142,7 @@ export default function AuthModal({ trigger }: Props) {
           maxEpoch: init.maxEpoch,
           randomness: init.randomness,
           nonce: nonce ?? undefined,
+          ephemeralPublicKey: init.ephemeralPublicKey,
           address,
           addressSeed: String(addressSeed),
           zkProof,

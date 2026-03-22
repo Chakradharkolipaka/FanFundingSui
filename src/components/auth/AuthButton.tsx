@@ -2,7 +2,7 @@
 
 import AuthModal from "@/components/auth/AuthModal";
 import { Button } from "@/components/ui/button";
-import { clearZkLoginSession } from "@/lib/zklogin/zkLoginSession";
+import { clearAllZkLoginState } from "@/lib/zklogin/zkLoginSession";
 import { useZkLoginSession } from "@/lib/zklogin/useZkLoginSession";
 
 /**
@@ -23,11 +23,7 @@ export default function AuthButton() {
     <Button
       variant="outline"
       onClick={() => {
-        clearZkLoginSession();
-        if (typeof window !== "undefined") {
-          window.sessionStorage.removeItem("fanfunding:zklogin-ephemeral-secret:v1");
-          window.sessionStorage.removeItem("fanfunding:zklogin-init:v1");
-        }
+        clearAllZkLoginState();
       }}
     >
       Sign out

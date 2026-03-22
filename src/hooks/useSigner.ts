@@ -41,6 +41,7 @@ export function useSigner(): UnifiedSigner | null {
         addressSeed: session.addressSeed!,
         zkProof: session.zkProof as any,
         ephemeralSecretKey: secret,
+        ephemeralPublicKey: session.ephemeralPublicKey,
       });
 
       return {
