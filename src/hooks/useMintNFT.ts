@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiClient } from "@mysten/sui/client";
 import { useSigner } from "@/hooks/useSigner";
+import { clearAllZkLoginState } from "@/lib/zklogin/zkLoginSession";
 
 /**
  * Hook for minting an NFT on Sui.
@@ -164,6 +165,12 @@ export function useMintNFT() {
       } catch (err: any) {
         console.error("[Mint] Error:", err);
         const msg = err?.message || String(err);
+        if (
+          msg.toLowerCase().includes("session mismatch") ||
+          msg.toLowerCase().includes("invalid user signature")
+        ) {
+          clearAllZkLoginState();
+        }
         if (msg.includes("User") || msg.includes("rejected") || msg.includes("Rejected")) {
           toast({
             title: "Transaction Rejected",

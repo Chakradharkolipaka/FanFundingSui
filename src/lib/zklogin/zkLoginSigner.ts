@@ -3,6 +3,7 @@ import type { Transaction } from "@mysten/sui/transactions";
 import { getZkLoginSignature } from "@mysten/sui/zklogin";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { getExtendedEphemeralPublicKey } from "@mysten/sui/zklogin";
+import { clearAllZkLoginState } from "./zkLoginSession";
 
 export type ZkLoginProof = {
   proofPoints: any;
@@ -58,6 +59,8 @@ export class ZkLoginSigner {
     if (this.session.ephemeralPublicKey) {
       const derivedEphemeralPublicKey = getExtendedEphemeralPublicKey(keypair.getPublicKey());
       if (derivedEphemeralPublicKey !== this.session.ephemeralPublicKey) {
+        // Self-heal by clearing state so the next login regenerates matching proof + seed + pubkey.
+        clearAllZkLoginState();
         throw new Error("zkLogin session mismatch (ephemeral key changed). Please sign in again.");
       }
     }

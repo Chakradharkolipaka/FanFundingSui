@@ -37,7 +37,12 @@ export default function AuthModal({ trigger }: Props) {
       // Re-initializing would create a new ephemeral keypair and can desync proof/seed/signature.
       const existing = loadZkLoginSession();
       if (existing?.address && existing?.jwt) {
+        // If the session is missing critical signing material, clear it so we can start fresh.
+        if (!existing.ephemeralPublicKey || !existing.ephemeralSecretKeySeedB64) {
+          clearAllZkLoginState();
+        } else {
         return;
+        }
       }
 
       setPendingInit(true);

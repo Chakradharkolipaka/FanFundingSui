@@ -4,8 +4,10 @@ import { useMemo } from "react";
 import { useSuiClient } from "@mysten/dapp-kit";
 import type { Transaction } from "@mysten/sui/transactions";
 import { useWallet } from "@/lib/wallet";
-import { loadZkLoginSession, clearZkLoginSession } from "@/lib/zklogin/zkLoginSession";
+import { clearAllZkLoginState, clearZkLoginSession, loadZkLoginSession } from "@/lib/zklogin/zkLoginSession";
 import { ZkLoginSigner } from "@/lib/zklogin/zkLoginSigner";
+import { getExtendedEphemeralPublicKey } from "@mysten/sui/zklogin";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 
 export type UnifiedSigner = {
   kind: "wallet" | "zklogin";
@@ -28,9 +30,28 @@ export function useSigner(): UnifiedSigner | null {
           ? window.sessionStorage.getItem("fanfunding:zklogin-ephemeral-secret:v1")
           : null);
 
-      if (!secret) {
-        // Can't sign without ephemeral secret. Don't auto-clear the session here because it makes UX confusing
-        // (user just signed in). Instead, return null and let UI prompt re-login.
+      if (!secret || !session.ephemeralPublicKey) {
+        // Session is incomplete (missing ephemeral secret/public key). Clear and force re-login to avoid
+        // producing invalid signatures that surface as "Required Signature absent".
+        clearAllZkLoginState();
+        return null;
+      }
+
+      // Validate invariants early: derived extended pubkey from the seed must match what the prover used.
+      try {
+        const decoded = Buffer.from(secret, "base64");
+        const seedBytes = decoded.length === 32 ? decoded : decoded.subarray(0, 32);
+        if (seedBytes.length !== 32) throw new Error(`Invalid seed size: ${decoded.length}`);
+
+        const keypair = Ed25519Keypair.fromSecretKey(seedBytes);
+        const derived = getExtendedEphemeralPublicKey(keypair.getPublicKey());
+        if (derived !== session.ephemeralPublicKey) {
+          clearAllZkLoginState();
+          return null;
+        }
+      } catch (err) {
+        console.warn("[useSigner] Clearing stale zkLogin session due to seed/pubkey mismatch", err);
+        clearAllZkLoginState();
         return null;
       }
 
