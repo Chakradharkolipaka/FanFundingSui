@@ -65,6 +65,7 @@ export default function AuthModal({ trigger }: Props) {
           "fanfunding:zklogin-init:v1",
           JSON.stringify({
             ephemeralPublicKey: init.ephemeralPublicKey,
+            ephemeralPublicKeySuiB64: init.ephemeralPublicKeySuiB64,
             randomness: init.randomness,
             maxEpoch: init.maxEpoch,
           })
@@ -91,6 +92,7 @@ export default function AuthModal({ trigger }: Props) {
         if (!initRaw) throw new Error("Missing zkLogin init data. Close and re-open auth modal.");
         const init = JSON.parse(initRaw) as {
           ephemeralPublicKey: string;
+          ephemeralPublicKeySuiB64?: string;
           randomness: string;
           maxEpoch: number;
         };
@@ -106,6 +108,7 @@ export default function AuthModal({ trigger }: Props) {
           body: JSON.stringify({
             jwt,
             ephemeralPublicKey: init.ephemeralPublicKey,
+            ephemeralPublicKeySuiB64: init.ephemeralPublicKeySuiB64,
             randomness: init.randomness,
             maxEpoch: init.maxEpoch,
           }),
@@ -148,6 +151,7 @@ export default function AuthModal({ trigger }: Props) {
           randomness: init.randomness,
           nonce: nonce ?? undefined,
           ephemeralPublicKey: init.ephemeralPublicKey,
+          ephemeralPublicKeySuiB64: init.ephemeralPublicKeySuiB64,
           address,
           addressSeed: String(addressSeed),
           zkProof,

@@ -10,6 +10,8 @@ export type ZkLoginInitResult = {
   ephemeralKeypair: Ed25519Keypair;
   // public key used for proving (extended format)
   ephemeralPublicKey: string;
+  // public key in Sui base64 (flag byte + raw pk), required by Enoki API
+  ephemeralPublicKeySuiB64: string;
   randomness: string;
   maxEpoch: number;
   nonce: string;
@@ -32,11 +34,14 @@ export async function initZkLogin(client: SuiClient): Promise<ZkLoginInitResult>
 
   const publicKey = ephemeralKeypair.getPublicKey();
   const ephemeralPublicKey = getExtendedEphemeralPublicKey(publicKey);
+  // Enoki HTTP API expects base64 of `PublicKey.toSuiBytes()` (flag + raw pk = 33 bytes)
+  const ephemeralPublicKeySuiB64 = Buffer.from(publicKey.toSuiBytes()).toString("base64");
   const nonce = generateNonce(publicKey, maxEpoch, randomness);
 
   return {
     ephemeralKeypair,
     ephemeralPublicKey,
+    ephemeralPublicKeySuiB64,
     randomness,
     maxEpoch,
     nonce,

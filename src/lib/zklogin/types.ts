@@ -26,6 +26,9 @@ export type ZkLoginSession = {
   /** Ephemeral public key (extended format string) used with the prover */
   ephemeralPublicKey?: string;
 
+  /** Optional: raw Sui base64 (flag + pk) used for Enoki prover compatibility */
+  ephemeralPublicKeySuiB64?: string;
+
   /** zkLogin derived address */
   address: string;
 

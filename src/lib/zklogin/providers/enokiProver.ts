@@ -51,7 +51,8 @@ export function createEnokiProverProvider(opts: {
           signal: ac.signal,
           body: JSON.stringify({
             network,
-            ephemeralPublicKey: input.ephemeralPublicKey,
+            // Enoki expects base64 of PublicKey.toSuiBytes(); fall back to extended if not provided.
+            ephemeralPublicKey: input.ephemeralPublicKeySuiB64 ?? input.ephemeralPublicKey,
             randomness: input.randomness,
             maxEpoch: input.maxEpoch,
           }),

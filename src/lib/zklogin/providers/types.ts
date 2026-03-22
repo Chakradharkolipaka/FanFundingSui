@@ -12,6 +12,8 @@ export type ProverOutput = {
 export type ProverInput = {
   jwt: string;
   ephemeralPublicKey: string;
+  /** Optional: raw Sui public key bytes (flag + pk) base64, needed for Enoki API */
+  ephemeralPublicKeySuiB64?: string;
   randomness: string;
   maxEpoch: number;
 };
