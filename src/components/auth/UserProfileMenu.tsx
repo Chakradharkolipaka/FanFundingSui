@@ -55,7 +55,6 @@ export default function UserProfileMenu() {
                 window.sessionStorage.removeItem("fanfunding:zklogin-init:v1");
               }
               setOpen(false);
-              window.location.reload();
             }}
           >
             Logout

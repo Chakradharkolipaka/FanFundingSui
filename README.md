@@ -66,6 +66,21 @@ PINATA_JWT=...                            # Server-side Pinata JWT
 
 # zkLogin (Google)
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=...          # Google OAuth client id
+
+# zkLogin prover selection
+# - enoki (recommended): uses Enoki HTTP API (requires ENOKI_API_KEY)
+# - docker: uses ZKLOGIN_PROVER_URL (self-hosted prover)
+# - auto: prefer Enoki if configured, else docker
+ZKLOGIN_PROVER_PROVIDER=enoki
+
+# Enoki prover (server-side)
+ENOKI_API_BASE_URL=https://api.enoki.mystenlabs.com/v1
+ENOKI_API_KEY=...
+
+# Used by Enoki prover to request proofs for the correct network
+SUI_NETWORK=testnet
+
+# Optional (only used when ZKLOGIN_PROVER_PROVIDER=docker)
 ZKLOGIN_PROVER_URL=...                    # zkLogin prover base URL, e.g. https://prover.your-domain.com/v1
 ```
 
@@ -75,6 +90,14 @@ This dApp supports **two** ways to sign Sui transactions:
 
 1) **Wallet extension** (existing): Sui Wallet / Suiet / etc.
 2) **Google zkLogin** (new): sign in with Google and get a derived Sui address without requiring a wallet extension.
+
+### UI behavior (walletless account)
+
+After a successful Google zkLogin sign-in:
+
+- The **Home page** shows a **“Walletless account (Google zkLogin)”** card.
+- The card displays the **derived Sui address**, provides a **Copy** button, and a direct link to the **testnet faucet**.
+- Wallet-extension flow remains unchanged (you can still connect Sui Wallet / Suiet normally).
 
 ### How it works
 
@@ -86,7 +109,7 @@ Google OAuth (GIS popup)
 ↓
 Google ID Token (JWT)
 ↓
-zkLogin prover (`ZKLOGIN_PROVER_URL`)
+zkLogin prover (Enoki)
 ↓
 Derived Sui Address
 ↓
@@ -96,9 +119,14 @@ Sign transaction with ephemeral key + zk proof
 
 1. Create a Google OAuth Client ID (Web) in Google Cloud Console.
 2. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local`.
-3. Set `ZKLOGIN_PROVER_URL` to a zkLogin prover endpoint (Mysten hosted or your own).
-	- In some environments (notably Vercel in some regions), Mysten hosted prover domains may fail DNS resolution (ENOTFOUND).
-	- If that happens, you must self-host a prover and point `ZKLOGIN_PROVER_URL` at it.
+3. Set `ZKLOGIN_PROVER_PROVIDER=enoki`.
+4. Set `ENOKI_API_KEY` (server-side) and keep `ENOKI_API_BASE_URL` as the default.
+5. Set `SUI_NETWORK=testnet` (or devnet/mainnet if enabled in Enoki).
+
+Notes:
+
+- If you use `ZKLOGIN_PROVER_PROVIDER=docker`, set `ZKLOGIN_PROVER_URL` to your self-hosted prover URL.
+- In some environments (notably Vercel in some regions), Mysten-hosted prover domains may fail DNS resolution (ENOTFOUND), so Enoki is the recommended default.
 
 See `PROVER.md` for a VPS + Docker guide.
 

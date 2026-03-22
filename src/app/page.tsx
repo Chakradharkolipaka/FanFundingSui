@@ -10,6 +10,7 @@ import { useNFTs } from "@/hooks/useNFTs";
 import { formatEth, shortenAddress, explorerAccountUrl, explorerTxUrl, explorerObjectUrl } from "@/lib/sui-utils";
 import { PACKAGE_ID, COLLECTION_ID, DONATION_TOKEN_SYMBOL, EXPLORER_BASE_URL } from "@/constants";
 import { ExternalLink } from "lucide-react";
+import WalletlessAccountCard from "@/components/WalletlessAccountCard";
 
 export default function Home() {
   const { nfts, totalSupply, isLoading, refetch } = useNFTs();
@@ -102,6 +103,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+  {/* ── Walletless Account Banner (Google zkLogin) ── */}
+  <WalletlessAccountCard />
 
       {/* ── Network Info Banner ── */}
       <section className="rounded-xl border bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-teal-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all duration-300 hover:shadow-lg">
