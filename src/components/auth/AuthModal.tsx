@@ -42,7 +42,10 @@ export default function AuthModal({ trigger }: Props) {
   const secretB64 = exportEphemeralKeypairSecret(init.ephemeralKeypair);
   const decoded = Buffer.from(secretB64, "base64");
   const seedB64 = Buffer.from(decoded.subarray(0, 32)).toString("base64");
+  // Keep in sessionStorage for backwards-compat/debug...
   window.sessionStorage.setItem("fanfunding:zklogin-ephemeral-secret:v1", seedB64);
+  // ...and also persist in the zkLogin session so signing works immediately and reliably.
+  // This avoids races where sessionStorage might not be read in time on the first action.
 
         // Stash init payload in memory for the next step.
         window.sessionStorage.setItem(
@@ -106,6 +109,8 @@ export default function AuthModal({ trigger }: Props) {
   // The helper handles extracting iss/sub/aud from JWT and computing the address.
   const address = jwtToAddress(jwt, BigInt(addressSeed));
 
+        const seedB64 = window.sessionStorage.getItem("fanfunding:zklogin-ephemeral-secret:v1") || undefined;
+
         saveZkLoginSession({
           provider: "google",
           jwt,
@@ -116,6 +121,7 @@ export default function AuthModal({ trigger }: Props) {
           address,
           addressSeed: String(addressSeed),
           zkProof,
+          ephemeralSecretKeySeedB64: seedB64,
           email: decoded?.email,
           picture: decoded?.picture,
         } as any);

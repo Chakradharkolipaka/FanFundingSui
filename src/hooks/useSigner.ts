@@ -21,11 +21,16 @@ export function useSigner(): UnifiedSigner | null {
   return useMemo(() => {
     const session = loadZkLoginSession();
     if (session?.address) {
-      // ephemeral secret is stored in sessionStorage
-      const secret = typeof window !== "undefined" ? window.sessionStorage.getItem("fanfunding:zklogin-ephemeral-secret:v1") : null;
+      // Ephemeral secret seed can be stored in the persisted session (preferred) or sessionStorage (back-compat).
+      const secret =
+        session.ephemeralSecretKeySeedB64 ||
+        (typeof window !== "undefined"
+          ? window.sessionStorage.getItem("fanfunding:zklogin-ephemeral-secret:v1")
+          : null);
+
       if (!secret) {
-        // Can't sign without ephemeral secret; clear stale local session.
-        clearZkLoginSession();
+        // Can't sign without ephemeral secret. Don't auto-clear the session here because it makes UX confusing
+        // (user just signed in). Instead, return null and let UI prompt re-login.
         return null;
       }
 
