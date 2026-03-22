@@ -39,10 +39,18 @@ export class ZkLoginSigner {
     // Build BCS bytes for signing.
     const txBytes = await tx.build({ client: this.client });
 
-    // The ephemeral secret key is stored as a base64 string by `Ed25519Keypair#getSecretKey()`.
-    // `fromSecretKey` expects raw bytes, not the base64 string.
-    const secretBytes = Buffer.from(this.session.ephemeralSecretKey, "base64");
-    const keypair = Ed25519Keypair.fromSecretKey(secretBytes);
+    // The ephemeral secret is stored as a base64 string.
+    // Depending on SDK version, `Ed25519Keypair#getSecretKey()` may encode:
+    // - a 32-byte seed, or
+    // - a 64-byte (seed || publicKey), or
+    // - other extended formats.
+    // `Ed25519Keypair.fromSecretKey` expects a 32-byte seed.
+    const decoded = Buffer.from(this.session.ephemeralSecretKey, "base64");
+    const seedBytes = decoded.length === 32 ? decoded : decoded.subarray(0, 32);
+    if (seedBytes.length !== 32) {
+      throw new Error(`Invalid ephemeral secretKey size: expected 32 bytes seed, got ${decoded.length}`);
+    }
+    const keypair = Ed25519Keypair.fromSecretKey(seedBytes);
     const { signature: userSignature } = await keypair.signTransaction(txBytes);
 
     const zkSig = getZkLoginSignature({
