@@ -25,21 +25,6 @@ export default function AuthModal({ trigger }: Props) {
   const [nonce, setNonce] = useState<string | null>(null);
   const [pendingInit, setPendingInit] = useState(false);
 
-  // Keep nonce stable across page navigations while the tab is open.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const initRaw = window.sessionStorage.getItem("fanfunding:zklogin-init:v1");
-    if (!initRaw) return;
-    try {
-      const init = JSON.parse(initRaw) as { nonce?: string };
-      if (init?.nonce && typeof init.nonce === "string") {
-        setNonce(init.nonce);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
   // Initialize nonce when modal opens so we can include it in the Google sign-in.
   // With GIS, nonce claim isn't automatically present unless you configure it in the request;
   // we still bind nonce via prover inputs and can optionally validate it in the JWT.
@@ -56,20 +41,7 @@ export default function AuthModal({ trigger }: Props) {
         if (!existing.ephemeralPublicKey || !existing.ephemeralSecretKeySeedB64) {
           clearAllZkLoginState();
         } else {
-          // If we already have init material from a previous open, reuse it.
-          const initRaw = window.sessionStorage.getItem("fanfunding:zklogin-init:v1");
-          if (initRaw) {
-            try {
-              const init = JSON.parse(initRaw) as { nonce?: string };
-              if (init?.nonce && typeof init.nonce === "string") {
-                setNonce(init.nonce);
-              }
-            } catch {
-              // ignore
-            }
-            return;
-          }
-          // Edge case: session exists but init payload got cleared (browser/sessionStorage). Re-init.
+        return;
         }
       }
 
@@ -96,7 +68,6 @@ export default function AuthModal({ trigger }: Props) {
             ephemeralPublicKeySuiB64: init.ephemeralPublicKeySuiB64,
             randomness: init.randomness,
             maxEpoch: init.maxEpoch,
-            nonce: init.nonce,
           })
         );
         setNonce(init.nonce);
