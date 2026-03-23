@@ -33,10 +33,25 @@ export function useSigner(): UnifiedSigner | null {
           : null);
 
       if (!secret || !session.ephemeralPublicKey) {
-        // Session is incomplete (missing ephemeral secret/public key). Clear and force re-login to avoid
-        // producing invalid signatures that surface as "Required Signature absent".
-        clearAllZkLoginState();
-        return null;
+        // IMPORTANT UX FIX:
+        // Don't clear an otherwise-valid session here. Clearing makes the UI lose the walletless address card
+        // immediately after login on refresh/navigation (because sessionStorage can be wiped by the browser).
+        // Instead, keep the session for display purposes and only fail if/when the user tries to sign.
+        return {
+          kind: "zklogin" as const,
+          address: session.address,
+          signAndExecute: async () => {
+            throw new Error(
+              "Walletless session is missing signing key material. Please sign out and sign in with Google again."
+            );
+          },
+          logout: () => {
+            clearZkLoginSession();
+            if (typeof window !== "undefined") {
+              window.sessionStorage.removeItem("fanfunding:zklogin-ephemeral-secret:v1");
+            }
+          },
+        };
       }
 
       // Validate invariants early: derived extended pubkey from the seed must match what the prover used.
@@ -48,6 +63,7 @@ export function useSigner(): UnifiedSigner | null {
         const keypair = Ed25519Keypair.fromSecretKey(seedBytes);
         const derived = getExtendedEphemeralPublicKey(keypair.getPublicKey());
         if (derived !== session.ephemeralPublicKey) {
+          // True corruption/mismatch: clear everything.
           clearAllZkLoginState();
           return null;
         }
