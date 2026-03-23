@@ -38,23 +38,14 @@ export function useSigner(): UnifiedSigner | null {
           : null);
 
       if (!secretStable || !session.ephemeralPublicKey) {
-        // IMPORTANT UX FIX:
-        // Don't clear an otherwise-valid session here. Clearing makes the UI lose the walletless address card
-        // immediately after login on refresh/navigation (because sessionStorage can be wiped by the browser).
-        // Instead, keep the session for display purposes and gracefully handle the signing error.
-        // User can retry without losing their visible address or session context.
+        // Don't clear session — keep the address card visible.
+        // Signing will fail with a clear message if attempted.
         return {
           kind: "zklogin" as const,
           address: session.address,
           signAndExecute: async (tx: any) => {
-            // Gracefully fall back: if the user has a wallet connected, they can still sign via wallet.
-            // For zkLogin, we'll silently re-prompt sign-in on the next tx attempt (not here, to avoid mid-flow errors).
-            console.warn(
-              "[useSigner] zkLogin session missing signing material, but address is recoverable. User can retry."
-            );
-            throw new Error(
-              "Walletless signing unavailable—please sign in again or use your wallet."
-            );
+            console.warn("[useSigner] zkLogin session missing signing material.");
+            throw new Error("Walletless signing unavailable—please sign in again.");
           },
           logout: () => {
             clearZkLoginSession();
@@ -66,13 +57,10 @@ export function useSigner(): UnifiedSigner | null {
         };
       }
 
-      // Validate invariants early: derived extended pubkey from the seed must match what the prover used.
+      // Validate the secret key reconstructs the correct keypair.
+      // The secret is stored as a bech32 "suiprivkey1..." string.
       try {
-  const decoded = Buffer.from(secretStable, "base64");
-        const seedBytes = decoded.length === 32 ? decoded : decoded.subarray(0, 32);
-        if (seedBytes.length !== 32) throw new Error(`Invalid seed size: ${decoded.length}`);
-
-        const keypair = Ed25519Keypair.fromSecretKey(seedBytes);
+        const keypair = Ed25519Keypair.fromSecretKey(secretStable);
         const derived = getExtendedEphemeralPublicKey(keypair.getPublicKey());
         if (derived !== session.ephemeralPublicKey) {
           // True corruption/mismatch: clear everything.
@@ -80,7 +68,7 @@ export function useSigner(): UnifiedSigner | null {
           return null;
         }
       } catch (err) {
-        console.warn("[useSigner] Clearing stale zkLogin session due to seed/pubkey mismatch", err);
+        console.warn("[useSigner] Clearing stale zkLogin session due to key reconstruction error", err);
         clearAllZkLoginState();
         return null;
       }

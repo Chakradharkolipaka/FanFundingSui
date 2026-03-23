@@ -49,6 +49,7 @@ export async function initZkLogin(client: SuiClient): Promise<ZkLoginInitResult>
 }
 
 export function exportEphemeralKeypairSecret(ephemeralKeypair: Ed25519Keypair): string {
-  // Persist only in sessionStorage (not localStorage).
+  // Returns the bech32-encoded secret key (suiprivkey1...) which can be
+  // passed directly to Ed25519Keypair.fromSecretKey() for reconstruction.
   return ephemeralKeypair.getSecretKey();
 }

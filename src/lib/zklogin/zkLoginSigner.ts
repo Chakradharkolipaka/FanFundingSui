@@ -39,32 +39,25 @@ export class ZkLoginSigner {
       tx.setSender(this.session.address);
     }
 
-    // Build BCS bytes for signing.
-    const txBytes = await tx.build({ client: this.client });
-
-    // The ephemeral secret is stored as a base64 string.
-    // Depending on SDK version, `Ed25519Keypair#getSecretKey()` may encode:
-    // - a 32-byte seed, or
-    // - a 64-byte (seed || publicKey), or
-    // - other extended formats.
-    // `Ed25519Keypair.fromSecretKey` expects a 32-byte seed.
-    const decoded = Buffer.from(this.session.ephemeralSecretKey, "base64");
-    const seedBytes = decoded.length === 32 ? decoded : decoded.subarray(0, 32);
-    if (seedBytes.length !== 32) {
-      throw new Error(`Invalid ephemeral secretKey size: expected 32 bytes seed, got ${decoded.length}`);
-    }
-    const keypair = Ed25519Keypair.fromSecretKey(seedBytes);
+    // Reconstruct the ephemeral keypair from the stored secret key.
+    // The secret is stored as a bech32 "suiprivkey1..." string (from Ed25519Keypair.getSecretKey()).
+    // Ed25519Keypair.fromSecretKey() handles this format directly.
+    const keypair = Ed25519Keypair.fromSecretKey(this.session.ephemeralSecretKey);
 
     // Invariant: the proof inputs (ephemeralPublicKey) must match the key we sign with.
     if (this.session.ephemeralPublicKey) {
       const derivedEphemeralPublicKey = getExtendedEphemeralPublicKey(keypair.getPublicKey());
       if (derivedEphemeralPublicKey !== this.session.ephemeralPublicKey) {
-        // Self-heal by clearing state so the next login regenerates matching proof + seed + pubkey.
         clearAllZkLoginState();
         throw new Error("zkLogin session mismatch (ephemeral key changed). Please sign in again.");
       }
     }
-    const { signature: userSignature } = await keypair.signTransaction(txBytes);
+
+    // Sign transaction with ephemeral key using tx.sign() (matches reference app pattern)
+    const { bytes, signature: userSignature } = await tx.sign({
+      client: this.client,
+      signer: keypair,
+    });
 
     const zkSig = getZkLoginSignature({
       inputs: {
@@ -76,7 +69,7 @@ export class ZkLoginSigner {
     });
 
     const res = await this.client.executeTransactionBlock({
-      transactionBlock: txBytes,
+      transactionBlock: bytes,
       signature: zkSig,
       options: { showEffects: true },
     });

@@ -39,6 +39,6 @@ export type ZkLoginSession = {
   /** JWT expiry in seconds since epoch */
   jwtExp?: number;
 
-  /** Ephemeral private key seed (base64, 32 bytes). Needed to sign transactions with zkLogin. */
+  /** Ephemeral private key (bech32 "suiprivkey1..." string). Needed to sign transactions with zkLogin. */
   ephemeralSecretKeySeedB64?: string;
 };

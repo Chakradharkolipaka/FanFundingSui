@@ -12,7 +12,9 @@ import { decodeJwt } from "jose";
 import { useToast } from "@/components/ui/use-toast";
 import {
   jwtToAddress,
+  getExtendedEphemeralPublicKey,
 } from "@mysten/sui/zklogin";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 
 type Props = {
   trigger?: React.ReactNode;
@@ -87,18 +89,11 @@ export default function AuthModal({ trigger }: Props) {
         const init = await initZkLogin(client as any);
         if (cancelled) return;
 
-  // Store ephemeral secret *seed* (32 bytes) in sessionStorage (private material not persisted long-term).
-  // Different SDK versions may encode more than 32 bytes in getSecretKey(); we normalize to the 32-byte seed
-  // so signing is deterministic and matches the ephemeralPublicKey used for the proof.
-  const secretB64 = exportEphemeralKeypairSecret(init.ephemeralKeypair);
-  const decoded = Buffer.from(secretB64, "base64");
-  const seedB64 = Buffer.from(decoded.subarray(0, 32)).toString("base64");
-  // Keep in sessionStorage for backwards-compat/debug...
-  window.sessionStorage.setItem("fanfunding:zklogin-ephemeral-secret:v1", seedB64);
-  // Also persist to localStorage so the walletless signer remains functional across refresh/navigation.
-  // This is required for an "error-free" walletless UX (otherwise mint/donate randomly breaks when
-  // sessionStorage gets cleared by the browser).
-  window.localStorage.setItem("fanfunding:zklogin-ephemeral-secret-seed:v1", seedB64);
+        // Store ephemeral secret key (bech32 "suiprivkey1..." string).
+        // Ed25519Keypair.fromSecretKey() accepts this format directly for perfect roundtrip.
+        const secretKey = exportEphemeralKeypairSecret(init.ephemeralKeypair);
+        window.sessionStorage.setItem("fanfunding:zklogin-ephemeral-secret:v1", secretKey);
+        window.localStorage.setItem("fanfunding:zklogin-ephemeral-secret-seed:v1", secretKey);
 
         // Stash init payload in memory for the next step.
         window.sessionStorage.setItem(
@@ -160,7 +155,7 @@ export default function AuthModal({ trigger }: Props) {
           throw new Error(err?.error || `Prover failed (${resp.status})`);
         }
 
-  const { zkProof, addressSeed } = (await resp.json()) as any;
+        const { zkProof, addressSeed } = (await resp.json()) as any;
 
         // Derive address client-side.
         // The helper handles extracting iss/sub/aud from JWT and computing the address.
@@ -172,8 +167,7 @@ export default function AuthModal({ trigger }: Props) {
           undefined;
 
         // --- Self-healing guard ---
-        // If the ephemeral seed isn't present, we can't sign transactions. If we proceed, users will hit
-        // "Invalid user signature / Required Signature absent". Instead, clear everything and force re-login.
+        // If the ephemeral secret isn't present, we can't sign transactions.
         if (!seedB64) {
           clearAllZkLoginState();
           throw new Error("zkLogin session incomplete. Please sign in again.");
@@ -184,6 +178,20 @@ export default function AuthModal({ trigger }: Props) {
         if (!normalized.startsWith("0x") || normalized.length < 10) {
           clearAllZkLoginState();
           throw new Error("zkLogin address derivation failed. Please sign in again.");
+        }
+
+        // Validate the secret key produces the right keypair before saving
+        try {
+          const testKeypair = Ed25519Keypair.fromSecretKey(seedB64);
+          const derivedPubkey = getExtendedEphemeralPublicKey(testKeypair.getPublicKey());
+          if (derivedPubkey !== init.ephemeralPublicKey) {
+            clearAllZkLoginState();
+            throw new Error("Ephemeral key mismatch after login. Please sign in again.");
+          }
+        } catch (e: any) {
+          if (e.message?.includes("mismatch")) throw e;
+          clearAllZkLoginState();
+          throw new Error("Failed to validate ephemeral key. Please sign in again.");
         }
 
         saveZkLoginSession({
