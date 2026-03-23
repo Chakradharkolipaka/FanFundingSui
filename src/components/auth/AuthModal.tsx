@@ -11,7 +11,7 @@ import { loadZkLoginSession } from "@/lib/zklogin/zkLoginSession";
 import { decodeJwt } from "jose";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  jwtToAddress,
+  computeZkLoginAddressFromSeed,
   getExtendedEphemeralPublicKey,
 } from "@mysten/sui/zklogin";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
@@ -157,9 +157,16 @@ export default function AuthModal({ trigger }: Props) {
 
         const { zkProof, addressSeed } = (await resp.json()) as any;
 
-        // Derive address client-side.
-        // The helper handles extracting iss/sub/aud from JWT and computing the address.
-        const address = jwtToAddress(jwt, BigInt(addressSeed));
+        // Derive address from the prover's addressSeed + JWT issuer.
+        // CRITICAL: The prover returns addressSeed = genAddressSeed(salt, "sub", sub, aud) — it is the
+        // FINAL poseidon hash. We must use computeZkLoginAddressFromSeed(addressSeed, iss), NOT
+        // jwtToAddress(jwt, addressSeed) — the latter treats its 2nd arg as a raw userSalt and would
+        // call genAddressSeed() AGAIN, double-hashing and producing a WRONG address.
+        const decoded_iss = decoded?.iss as string;
+        if (!decoded_iss) {
+          throw new Error("JWT missing 'iss' claim. Cannot derive zkLogin address.");
+        }
+        const address = computeZkLoginAddressFromSeed(BigInt(addressSeed), decoded_iss);
 
         const seedB64 =
           window.sessionStorage.getItem("fanfunding:zklogin-ephemeral-secret:v1") ||
