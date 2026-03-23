@@ -8,6 +8,7 @@ import { clearAllZkLoginState, clearZkLoginSession, loadZkLoginSession } from "@
 import { ZkLoginSigner } from "@/lib/zklogin/zkLoginSigner";
 import { getExtendedEphemeralPublicKey } from "@mysten/sui/zklogin";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { useZkLoginSession } from "@/lib/zklogin/useZkLoginSession";
 
 export type UnifiedSigner = {
   kind: "wallet" | "zklogin";
@@ -19,9 +20,10 @@ export type UnifiedSigner = {
 export function useSigner(): UnifiedSigner | null {
   const wallet = useWallet();
   const client = useSuiClient();
+  const zk = useZkLoginSession();
 
   return useMemo(() => {
-    const session = loadZkLoginSession();
+    const session = zk ?? loadZkLoginSession();
     if (session?.address) {
       // Ephemeral secret seed can be stored in the persisted session (preferred) or sessionStorage (back-compat).
       const secret =
@@ -87,5 +89,5 @@ export function useSigner(): UnifiedSigner | null {
     }
 
     return null;
-  }, [wallet.connected, wallet.address, wallet.signAndExecuteTransaction, client]);
+  }, [wallet.connected, wallet.address, wallet.signAndExecuteTransaction, client, zk]);
 }

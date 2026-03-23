@@ -25,6 +25,23 @@ export default function AuthModal({ trigger }: Props) {
   const [nonce, setNonce] = useState<string | null>(null);
   const [pendingInit, setPendingInit] = useState(false);
 
+  function readInitFromSessionStorage(): {
+    ephemeralPublicKey: string;
+    ephemeralPublicKeySuiB64?: string;
+    randomness: string;
+    maxEpoch: number;
+    nonce?: string;
+  } | null {
+    if (typeof window === "undefined") return null;
+    const raw = window.sessionStorage.getItem("fanfunding:zklogin-init:v1");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
   // Initialize nonce when modal opens so we can include it in the Google sign-in.
   // With GIS, nonce claim isn't automatically present unless you configure it in the request;
   // we still bind nonce via prover inputs and can optionally validate it in the JWT.
@@ -32,6 +49,14 @@ export default function AuthModal({ trigger }: Props) {
     let cancelled = false;
     async function run() {
       if (!open) return;
+
+      // Reuse existing in-tab init (nonce/randomness/maxEpoch/epk) if present.
+      // This prevents "nonce mismatch" caused by regenerating init while GIS popup may still be using prior nonce.
+      const existingInit = readInitFromSessionStorage();
+      setNonce((prev) => (prev ?? (existingInit?.nonce && typeof existingInit.nonce === "string" ? existingInit.nonce : null)));
+      if (existingInit?.ephemeralPublicKey && existingInit?.randomness && existingInit?.maxEpoch) {
+        return;
+      }
 
       // Clean target design: if a valid zkLogin session already exists, don't generate new init material.
       // Re-initializing would create a new ephemeral keypair and can desync proof/seed/signature.
@@ -68,6 +93,7 @@ export default function AuthModal({ trigger }: Props) {
             ephemeralPublicKeySuiB64: init.ephemeralPublicKeySuiB64,
             randomness: init.randomness,
             maxEpoch: init.maxEpoch,
+            nonce: init.nonce,
           })
         );
         setNonce(init.nonce);
